@@ -241,6 +241,8 @@ UINT Capture(LPVOID pParam)
 			break;
 		}
 
+		cv::ellipse(*wc->imageSource,Point(340, 210), Size(350, 350), 0, 0, 360, Scalar(0, 0, 255), 3, 8, 0);
+
 		*wc->imageConvert = Mat::zeros(Size(wc->imageSource->cols * sizeRatio, wc->imageSource->rows * sizeRatio), CV_8UC3);
 		*wc->imageFishEye = Mat::zeros(wc->imageConvert->size(), CV_8UC3);
 
