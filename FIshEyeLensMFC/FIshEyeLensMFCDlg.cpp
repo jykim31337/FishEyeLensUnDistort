@@ -11,6 +11,27 @@
 #define new DEBUG_NEW
 #endif
 
+/* 변수 선언 */
+WebCam** webCamList = new WebCam*();
+int nWebCamCnt = 0;
+int nWidth = 640;
+int nHeight = 480;
+bool DoWork = true;
+
+/* 함수 선언 */
+UINT Capture(LPVOID pParam);
+char* ConvertCString2CharPointer(CString str);
+
+/* 왜곡 보정 */
+double cx, cy, fx, fy, k1, k2, k3, p1, p2, skew_c = 0;
+void DistortPixel(int& px, int& py);
+void Normalize(double &x, double& y);
+void Denormalize(double &x, double& y);
+void Distort(double& x, double& y);
+void InitParam();
+void cvtImage(WebCam* iw);
+int sizeRatio = 2;
+double undistortFactor = 0;
 
 // 응용 프로그램 정보에 사용되는 CAboutDlg 대화 상자입니다.
 
@@ -51,6 +72,7 @@ END_MESSAGE_MAP()
 
 CFIshEyeLensMFCDlg::CFIshEyeLensMFCDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_FISHEYELENSMFC_DIALOG, pParent)
+	, m_FACTOR(_T("0"))
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -58,6 +80,8 @@ CFIshEyeLensMFCDlg::CFIshEyeLensMFCDlg(CWnd* pParent /*=NULL*/)
 void CFIshEyeLensMFCDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
+	//  DDX_Control(pDX, IDC_EDIT_FACTOR, FACTOR);
+	DDX_Text(pDX, IDC_EDIT_FACTOR, m_FACTOR);
 }
 
 BEGIN_MESSAGE_MAP(CFIshEyeLensMFCDlg, CDialogEx)
@@ -65,6 +89,8 @@ BEGIN_MESSAGE_MAP(CFIshEyeLensMFCDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_BUTTON_START_WEBCAM, &CFIshEyeLensMFCDlg::OnBnClickedButtonStartWebcam)
+	ON_WM_CLOSE()
+	ON_EN_CHANGE(IDC_EDIT_FACTOR, &CFIshEyeLensMFCDlg::OnChangeEditFactor)
 END_MESSAGE_MAP()
 
 
@@ -100,6 +126,9 @@ BOOL CFIshEyeLensMFCDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// 작은 아이콘을 설정합니다.
 
 	// TODO: 여기에 추가 초기화 작업을 추가합니다.
+
+	//초기화
+	InitParam();
 
 	return TRUE;  // 포커스를 컨트롤에 설정하지 않으면 TRUE를 반환합니다.
 }
@@ -157,5 +186,211 @@ HCURSOR CFIshEyeLensMFCDlg::OnQueryDragIcon()
 
 void CFIshEyeLensMFCDlg::OnBnClickedButtonStartWebcam()
 {
+	StartCapture();
+}
+
+void CFIshEyeLensMFCDlg::StartCapture()
+{
+	/* 문자열 변환 */
+	CString str;
+
+	str.Format(_T("window[%d]"), nWebCamCnt);
+
+	/* 문자열 변환 완료 */
+
+	WebCam * webCam = new WebCam();
+	webCam->nCameraIndex = nWebCamCnt;
+	webCam->windowName = ConvertCString2CharPointer(str);
+
+	webCamList[nWebCamCnt] = webCam;
+
+	CWinThread* pThread0 = AfxBeginThread(Capture, webCam);
+
+	nWebCamCnt++;
+
+	SetTimer(1394, 100, NULL);
+}
+
+char* ConvertCString2CharPointer(CString str)
+{
+	wchar_t* wchar_str;
+	char * char_str;
+	int char_str_len;
+
+	wchar_str = str.GetBuffer(str.GetLength());
+	char_str_len = WideCharToMultiByte(CP_ACP, 0, wchar_str, -1, NULL, 0, NULL, NULL);
+	char_str = new char[char_str_len];
+	WideCharToMultiByte(CP_ACP, 0, wchar_str, -1, char_str, char_str_len, 0, 0);
+
+	return char_str;
+}
+
+
+
+UINT Capture(LPVOID pParam)
+{
+	WebCam* wc = (WebCam*)pParam;
+	wc->vc = new VideoCapture(wc->nCameraIndex);
+
+	while (DoWork)
+	{
+		*wc->vc >> *wc->imageSource;
+
+		if (wc->imageSource->empty())
+		{
+			break;
+		}
+
+		*wc->imageConvert = Mat::zeros(Size(wc->imageSource->cols * sizeRatio, wc->imageSource->rows * sizeRatio), CV_8UC3);
+		*wc->imageFishEye = Mat::zeros(wc->imageConvert->size(), CV_8UC3);
+
+		cvtImage(wc);
+
+		int h = wc->imageConvert->rows;
+		int w = wc->imageConvert->cols;
+
+		for (int y = 0; y<h; y++)
+		{
+			for (int x = 0; x<w; x++)
+			{
+				int px = x;
+				int py = y;
+				DistortPixel(px, py);
+
+				if (px >= 0 && py >= 0 && px<w && py<h)
+				{
+					wc->imageFishEye->data[(y * wc->imageConvert->cols * 3) + (x * 3) + 2] = wc->imageConvert->data[(py * wc->imageConvert->cols * 3) + (px * 3) + 2];
+					wc->imageFishEye->data[(y * wc->imageConvert->cols * 3) + (x * 3) + 1] = wc->imageConvert->data[(py * wc->imageConvert->cols * 3) + (px * 3) + 1];
+					wc->imageFishEye->data[(y * wc->imageConvert->cols * 3) + (x * 3) + 0] = wc->imageConvert->data[(py * wc->imageConvert->cols * 3) + (px * 3) + 0];
+				}
+			}
+		}
+
+		imshow(wc->windowName, *wc->imageFishEye);
+
+		if (waitKey(10) == 27)
+		{
+			break; // EXC
+		}
+	}
+
+	return 0;
+}
+
+/*FishEye Start*/
+
+void InitParam()
+{
+	fx = 214.885 * sizeRatio;
+	fy = 214.909 * sizeRatio;
+	cx = 318.885 * sizeRatio;
+	cy = 238.485 * sizeRatio;
+
 	
+	k1 = -0.18894 * undistortFactor;
+	k2 = 0.02724 * undistortFactor;
+	k3 = 0 * undistortFactor;
+	p1 = 0.000787 * undistortFactor;
+	p2 = -0.003942 * undistortFactor;
+}
+
+void DistortPixel(int& px, int& py)
+{
+	double x = px;
+	double y = py;
+
+	Normalize(x, y);
+	Distort(x, y);
+	Denormalize(x, y);
+
+	px = (int)(x + 0.5);
+	py = (int)(y + 0.5);
+}
+
+void Normalize(double &x, double& y)
+{
+	double y_n = (y - cy) / fy;
+	double x_n = (x - cx) / fx - skew_c*y_n;
+
+	x = x_n;
+	y = y_n;
+}
+
+void Denormalize(double &x, double& y)
+{
+	double x_p = fx*(x + skew_c*y) + cx;
+	double y_p = fy*y + cy;
+
+	x = x_p;
+	y = y_p;
+}
+
+void Distort(double& x, double& y)
+{
+	double r2 = x*x + y*y;
+	double radial_d = 1 + k1*r2 + k2*r2*r2 + k3*r2*r2*r2;
+	double x_d = radial_d*x + 2 * p1*x*y + p2*(r2 + 2 * x*x);
+	double y_d = radial_d*y + p1*(r2 + 2 * y*y) + 2 * p2*x*y;
+
+	x = x_d;
+	y = y_d;
+}
+
+void cvtImage(WebCam* webCam)
+{
+	int margin = 2;
+
+	for (int y = 0; y < webCam->imageSource->rows; y++)
+	{
+		for (int x = 0; x < webCam->imageSource->cols; x++)
+		{
+			//int margin = 1;
+			webCam->imageConvert->data[((y + webCam->imageSource->rows / margin) * webCam->imageConvert->cols * 3) + ((x + webCam->imageSource->cols / margin) * 3) + 2] = webCam->imageSource->data[(y * nWidth * 3) + (x * 3) + 2];
+
+			webCam->imageConvert->data[((y + webCam->imageSource->rows / margin) * webCam->imageConvert->cols * 3) + ((x + webCam->imageSource->cols / margin) * 3) + 1] = webCam->imageSource->data[(y * nWidth * 3) + (x * 3) + 1];
+
+			webCam->imageConvert->data[((y + webCam->imageSource->rows / margin) * webCam->imageConvert->cols * 3) + ((x + webCam->imageSource->cols / margin) * 3) + 0] = webCam->imageSource->data[(y * nWidth * 3) + (x * 3) + 0];
+		}
+	}
+}
+/*FishEye End*/
+
+
+void CFIshEyeLensMFCDlg::OnClose()
+{
+	//// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
+	//CDialogEx::OnClose();
+	// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
+	DoWork = false;
+	CDialogEx::OnClose();
+
+	DWORD dwExitCode;
+	DWORD dwPID = GetCurrentProcessId();    // 현재 자신의 프로세스 ID 가져오기.
+
+	HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, 0, dwPID);    // 프로세스 핸들 가져오기
+
+	if (NULL != hProcess)
+	{
+		GetExitCodeProcess(hProcess, &dwExitCode);   // 프로세스 나가기 코드 얻어오기
+		TerminateProcess(hProcess, dwExitCode);    // 프로세스 연결 끊기
+		WaitForSingleObject(hProcess, INFINITE); // 종료 될때까지 대기
+		CloseHandle(hProcess);                                 // 프로세스 핸들 닫기
+	}
+}
+
+
+void CFIshEyeLensMFCDlg::OnChangeEditFactor()
+{
+	// TODO:  RICHEDIT 컨트롤인 경우, 이 컨트롤은
+	// CDialogEx::OnInitDialog() 함수를 재지정 
+	//하고 마스크에 OR 연산하여 설정된 ENM_CHANGE 플래그를 지정하여 CRichEditCtrl().SetEventMask()를 호출하지 않으면
+	// 이 알림 메시지를 보내지 않습니다.
+
+	// TODO:  여기에 컨트롤 알림 처리기 코드를 추가합니다.
+
+	UpdateData();
+
+	undistortFactor = _ttof(m_FACTOR);
+
+	InitParam();
 }

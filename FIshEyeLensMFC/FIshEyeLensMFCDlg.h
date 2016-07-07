@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include "afxwin.h"
 
 typedef struct WebCam
 {
@@ -10,6 +11,8 @@ typedef struct WebCam
 	byte nCameraIndex = 0;
 	char* windowName = 0;
 	Mat* imageSource = new Mat();
+	Mat* imageConvert = new Mat();
+	Mat* imageFishEye = new Mat();
 };
 
 // CFIshEyeLensMFCDlg 대화 상자
@@ -40,4 +43,13 @@ protected:
 	DECLARE_MESSAGE_MAP()
 public:
 	afx_msg void OnBnClickedButtonStartWebcam();
+
+	/* 사용자 함수 선언 */
+private:
+	void CFIshEyeLensMFCDlg::StartCapture();
+public:
+	afx_msg void OnClose();
+//	CEdit FACTOR;
+	afx_msg void OnChangeEditFactor();
+	CString m_FACTOR;
 };
