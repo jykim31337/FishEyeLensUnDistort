@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FishEyeLensImgCvt", "FishEy
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FIshEyeLensMFC", "FIshEyeLensMFC\FIshEyeLensMFC.vcxproj", "{BA9730CE-A7B1-455F-9D89-B792BCD28293}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FishEyeLensCalibration", "FishEyeLensCalibration\FishEyeLensCalibration.vcxproj", "{45FB9E32-D78B-4B3A-9C5E-3955AB77E9B4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -52,6 +54,15 @@ Global
 		{BA9730CE-A7B1-455F-9D89-B792BCD28293}.Release|x64.ActiveCfg = Release|x64
 		{BA9730CE-A7B1-455F-9D89-B792BCD28293}.Release|x64.Build.0 = Release|x64
 		{BA9730CE-A7B1-455F-9D89-B792BCD28293}.Release|x86.ActiveCfg = Release|x64
+		{45FB9E32-D78B-4B3A-9C5E-3955AB77E9B4}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{45FB9E32-D78B-4B3A-9C5E-3955AB77E9B4}.Debug|Any CPU.Build.0 = Debug|x64
+		{45FB9E32-D78B-4B3A-9C5E-3955AB77E9B4}.Debug|x64.ActiveCfg = Debug|x64
+		{45FB9E32-D78B-4B3A-9C5E-3955AB77E9B4}.Debug|x64.Build.0 = Debug|x64
+		{45FB9E32-D78B-4B3A-9C5E-3955AB77E9B4}.Debug|x86.ActiveCfg = Debug|x64
+		{45FB9E32-D78B-4B3A-9C5E-3955AB77E9B4}.Release|Any CPU.ActiveCfg = Release|x64
+		{45FB9E32-D78B-4B3A-9C5E-3955AB77E9B4}.Release|x64.ActiveCfg = Release|x64
+		{45FB9E32-D78B-4B3A-9C5E-3955AB77E9B4}.Release|x64.Build.0 = Release|x64
+		{45FB9E32-D78B-4B3A-9C5E-3955AB77E9B4}.Release|x86.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
