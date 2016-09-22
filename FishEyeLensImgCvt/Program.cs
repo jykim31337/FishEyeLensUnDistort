@@ -6,6 +6,7 @@ namespace FishEyeLensImgCvt
 {
     class Program
     {
+        static double vector = 2;
         static double cx, cy, fx, fy, k1, k2, k3, p1, p2, skew_c = 0;
         static void Main(string[] args)
         {
@@ -15,11 +16,19 @@ namespace FishEyeLensImgCvt
             cx = 318.885 * 2;
             cy = 238.485 * 2;
 
+#if false
             k1 = -0.18894 * 1.25;
             k2 = 0.02724 * 1.25;
             k3 = 0 * 1.5;
             p1 = 0.000787 * 1.25;
             p2 = -0.003942 * 1.25;
+#else
+            k1 = -0.18894 * vector;
+            k2 = 0.02724 * vector;
+            k3 = 0 * vector;
+            p1 = 0.000787 * vector;
+            p2 = -0.003942 * vector;
+#endif
 #else
             fx = 214.885;
             fy = 214.909;
@@ -33,7 +42,7 @@ namespace FishEyeLensImgCvt
             p2 = -0.003942;
 #endif
 
-            string image = @"D:\CBACKUP\images\image6.png";
+            string image = @"d:\_1.jpg";
 
             Mat source = new Mat(image);
 
